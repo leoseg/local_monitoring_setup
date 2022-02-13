@@ -1,0 +1,52 @@
+# Rule name
+name: Alert on any error
+# Fill in USERNAME and PASSWORD here
+es_host: "elasticsearch"
+es_port: 9200
+es_username: elastic
+es_password: changeme
+
+# Elasticsearch Index to search for issues. As we are using
+# filebeat for our log file delivery to Elasticsearch, all logs 
+# will be in indices called filebeat-something.
+index: filebeat*
+timestamp_field: "@timestamp"
+
+type: any
+realert: 
+  seconds: 0
+# Alert whenever something was logged to STDERR
+filter:
+- query:
+    query_string:
+      query: "stream:\"stderr\""
+- query:
+    query_string:
+      query: "container.labels.com_docker_compose_project_config_files: docker-compose-local.yml"
+# Aggregate alerts by the Docker container name, 
+# so you will receive one alert per container. It will 
+# contain all errors logged in the last five minutes.
+# This avoids huge amounts of emails in case one of
+# your services logs a lot of errors.
+aggregation:
+  minutes: 5
+aggregation_key: "docker.container.name"
+# Send out the alert via email.
+alert:
+  - email
+# Use the container name as the email subject
+alert_subject_args:
+  - docker.container.name
+alert_subject:
+  - "Error on {0}"
+# Recipient address for alert emails
+email:
+  - "leoseeger16@gmail.com"
+# For email delivery, we need to define an SMTP connection. Enter
+# your SMTP host name, port and whether TLS/SSL is to be used
+# (if not, it'll fall back to STARTSSL).
+# We define the SMTP user data in smtp-auth.yml.
+smtp_host: "smtp.gmail.com"
+smtp_port: 587
+smtp_ssl: true 
+smtp_auth_file: "/opt/elastalert/smtp-auth.yml"
